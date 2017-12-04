@@ -4,7 +4,6 @@ import (
     "net/http"
 
     "falcon-api/application/controller/alarm"
-    "falcon-api/application/controller/dashboard"
     "falcon-api/application/controller/graph"
     "falcon-api/application/controller/service"
     "falcon-api/application/controller/strategy"
@@ -17,7 +16,6 @@ import (
 func StartGin(port string, r *gin.Engine) {
     SystemRoutes(r)
     alarm.Routes(r)
-    dashboard.Routes(r)
     graph.Routes(r)
     service.Routes(r)
     strategy.Routes(r)
@@ -28,7 +26,7 @@ func StartGin(port string, r *gin.Engine) {
 
 func SystemRoutes(r *gin.Engine) {
     r.GET("/", func(c *gin.Context) {
-        c.String(http.StatusOK, "Hello, I'm Hualala SRE!")
+        c.String(http.StatusOK, "Hello, I'm SRE!")
     }) 
 
     r.GET("/ping", func(c *gin.Context) {
