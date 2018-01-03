@@ -12,7 +12,7 @@ import (
     "falcon-api/application/model"
     gclient "falcon-api/application/graph"
     gm "falcon-api/application/model/graph"
-    "falcon-api/application/utils"
+    //"falcon-api/application/utils"
 
     cmodel "github.com/open-falcon/falcon-plus/common/model"
     "github.com/gin-gonic/gin"
@@ -155,62 +155,89 @@ func GetEndpointByRegExp(c *gin.Context) {
 }
 
 func GetEndpointCounterByRegExp(c *gin.Context) {
-    eid := c.DefaultQuery("eid", "")
+    hostQuery := c.DefaultQuery("hostQuery", "")
+    if hostQuery == "" {
+        h.JSONR(c, http.StatusBadRequest, "hostQuery is missing")
+        return
+    }
+
+    hosts := []string{}
+    hosts = strings.Split(hostQuery, ",")
+
     metricQuery := c.DefaultQuery("metricQuery", ".+")
+    
     limitTmp := c.DefaultQuery("limit", "500")
     limit, err := strconv.Atoi(limitTmp)
     if err != nil {
         h.JSONR(c, http.StatusBadRequest, err)
         return
     }
+
     pageTmp := c.DefaultQuery("page", "1")                                                               
     page, err := strconv.Atoi(pageTmp)                                                                   
     if err != nil {
         h.JSONR(c, http.StatusBadRequest, err)
         return
     }
+
     var offset int = 0                                                                                   
     if page > 1 {                                                                                        
         offset = (page - 1) * limit
     }
-    if eid == "" {
-        h.JSONR(c, http.StatusBadRequest, "eid is missing")
-    } else {
-        eids := utils.ConverIntStringToList(eid)
-        if eids == "" {
-            h.JSONR(c, http.StatusBadRequest, "input error, please check your input info.")
-            return
-        } else {
-            eids = fmt.Sprintf("(%s)", eids)
-        }
 
-        var counters []gm.EndpointCounter
-        dt := db.Graph.Table("endpoint_counter").Select("endpoint_id, counter, step, type").Where(fmt.Sprintf("endpoint_id IN %s", eids))
-        if metricQuery != "" {
-            qs := strings.Split(metricQuery, " ")
-            if len(qs) > 0 {
-                for _, term := range qs {
-                    dt = dt.Where("counter regexp ?", strings.TrimSpace(term))
-                }
+    // query endpoint ids by hostname
+    var endpoint_id []int
+    var dt *gorm.DB
+    dt = db.Graph.Table("endpoint").Select("id")
+    for _, host := range hosts {
+        //dt = dt.Where(" endpoint regexp ? ", strings.TrimSpace(host))
+        dt = dt.Where(" endpoint like ? ", "%"+strings.TrimSpace(host)+"%")
+    }
+    dt = dt.Pluck("id", &endpoint_id)
+
+    // prepare condition string
+    condition := ""
+    if len(endpoint_id) == 0 {
+        h.JSONR(c, http.StatusBadRequest, "no endpoint id, please check your input info.")
+        return
+    } else {
+	    for idx, id := range endpoint_id {
+			if idx == 0 {
+				condition = fmt.Sprintf("%d", id)
+			} else {
+				condition = fmt.Sprintf("%s, %d", condition, id)
+			}
+        }
+    }
+
+    // query counters
+    var counters []gm.EndpointCounter
+    dt = db.Graph.Table("endpoint_counter").Select("endpoint_id, counter, step, type").Where(fmt.Sprintf("endpoint_id IN %s", condition))
+    if metricQuery != "" {
+        qs := strings.Split(metricQuery, " ")
+        if len(qs) > 0 {
+            for _, term := range qs {
+                dt = dt.Where("counter regexp ?", strings.TrimSpace(term))
             }
         }
-        dt = dt.Limit(limit).Offset(offset).Scan(&counters)
-        if dt.Error != nil {
-            h.JSONR(c, http.StatusBadRequest, dt.Error)
-            return
-        }
-
-        countersResp := []interface{}{}
-        for _, c := range counters {
-            countersResp = append(countersResp, map[string]interface{}{
-                "endpoint_id": c.EndpointID,
-                "counter":     c.Counter,
-                "step":        c.Step,
-                "type":        c.Type,
-            })
-        }
-        h.JSONR(c, countersResp)
     }
+    dt = dt.Limit(limit).Offset(offset).Scan(&counters)
+    if dt.Error != nil {
+        h.JSONR(c, http.StatusBadRequest, dt.Error)
+        return
+    }
+
+    // prepare response
+    countersResp := []interface{}{}
+    for _, c := range counters {
+        countersResp = append(countersResp, map[string]interface{}{
+            "endpoint_id": c.EndpointID,
+            "counter":     c.Counter,
+            "step":        c.Step,
+            "type":        c.Type,
+        })
+    }
+    h.JSONR(c, countersResp)
     return
 }
 

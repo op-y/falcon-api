@@ -104,14 +104,14 @@ func GetServices(c *gin.Context) {
 }
 
 func GetServiceByName(c *gin.Context) {
-    grpNametmp := c.Params.ByName("name")
+    grpName := c.Params.ByName("name")
     q := c.DefaultQuery("q", ".+") 
-    if grpNametmp == "" {
+    if grpName == "" {
         h.JSONR(c, http.StatusBadRequest, "service name is missing")                                                       
         return
     }
 
-    hostgroup := fpm.HostGroup{Name: grpNametmp}
+    hostgroup := fpm.HostGroup{Name: grpName}
     if dt := db.FalconPortal.Where("grp_name = ?", hostgroup.Name).First(&hostgroup); dt.Error != nil {                                               
         h.JSONR(c, http.StatusExpectationFailed, dt.Error)                                                                
         return
@@ -424,13 +424,13 @@ func GetAggregatorListOfService(c *gin.Context) {
         return
     }   
 
-    grpNametmp := c.Params.ByName("name")
-    if grpNametmp == "" {
+    grpName := c.Params.ByName("name")
+    if grpName == "" {
         h.JSONR(c, http.StatusBadRequest, "grp name is missing")
         return
     }   
 
-    hostgroup := fpm.HostGroup{Name: grpNametmp}                                                           
+    hostgroup := fpm.HostGroup{Name: grpName}                                                           
     if dt := db.FalconPortal.Where("grp_name = ?", hostgroup.Name).First(&hostgroup); dt.Error != nil {                                           
         h.JSONR(c, http.StatusBadRequest, dt.Error)
         return
@@ -571,13 +571,13 @@ func DeleteAggregator(c *gin.Context) {
 }
 
 func GetTemplateOfService(c *gin.Context) {
-    grpNametmp := c.Params.ByName("name")
-    if grpNametmp == "" {
+    grpName := c.Params.ByName("name")
+    if grpName == "" {
         h.JSONR(c, http.StatusBadRequest, "grp id is missing")
         return
     }
 
-    hostgroup := fpm.HostGroup{Name: grpNametmp}
+    hostgroup := fpm.HostGroup{Name: grpName}
     if dt := db.FalconPortal.Where("grp_name = ?", hostgroup.Name).First(&hostgroup); dt.Error != nil {
         h.JSONR(c, http.StatusBadRequest, dt.Error)
         return
