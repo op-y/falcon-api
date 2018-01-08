@@ -189,11 +189,15 @@ func GetEndpointCounterByRegExp(c *gin.Context) {
     var endpoint_id []int
     var dt *gorm.DB
     dt = db.Graph.Table("endpoint").Select("id")
-    for _, host := range hosts {
+    for idx, host := range hosts {
         //dt = dt.Where(" endpoint regexp ? ", strings.TrimSpace(host))
-        dt = dt.Where(" endpoint like ? ", "%"+strings.TrimSpace(host)+"%")
+        if 0 == idx {
+            dt = dt.Where(" endpoint like ? ", "%"+strings.TrimSpace(host)+"%")
+        }
+        dt = dt.Or(" endpoint like ? ", "%"+strings.TrimSpace(host)+"%")
     }
     dt = dt.Pluck("id", &endpoint_id)
+    log.Debugf("important eids: %v", endpoint_id)
 
     // prepare condition string
     condition := ""
@@ -209,6 +213,8 @@ func GetEndpointCounterByRegExp(c *gin.Context) {
 			}
         }
     }
+    condition = fmt.Sprintf("(%s)", condition)
+    log.Debugf("condition string: %v", condition)
 
     // query counters
     var counters []gm.EndpointCounter
