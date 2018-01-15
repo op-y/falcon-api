@@ -202,6 +202,8 @@ func GetEndpointCounterByRegExp(c *gin.Context) {
     // prepare condition string
     condition := ""
     if len(endpoint_id) == 0 {
+        //emptyResp := []interface{}{}
+        //h.JSONR(c, emptyResp)
         h.JSONR(c, http.StatusBadRequest, "no endpoint id, please check your input info.")
         return
     } else {
